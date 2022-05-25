@@ -1,0 +1,4 @@
+.idea/
+bin/*
+config/*
+!config/app.yml.example

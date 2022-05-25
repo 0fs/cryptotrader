@@ -1,0 +1,2 @@
+# cryptotrader
+Golang cryptotrader
