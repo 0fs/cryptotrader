@@ -1,0 +1,12 @@
+binance:
+  test: true
+  api:
+    spot:
+      key: your-spot-api-key
+      secret: your-spot-api-secret
+    futures:
+      key: your-futures-api-key
+      secret: your-futures-secret
+    delivery:
+      key: your-delivery-api-key
+      secret: your-delivery-secret

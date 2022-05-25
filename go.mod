@@ -3,12 +3,17 @@ module github.com/0fs/cryprotrader
 go 1.18
 
 require (
+	github.com/adshao/go-binance/v2 v2.3.5
+	github.com/cinar/indicator v1.2.17
+	github.com/markcheno/go-talib v0.0.0-20190307022042-cd53a9264d70
 	github.com/rs/zerolog v1.26.1
 	github.com/spf13/viper v1.11.0
 )
 
 require (
+	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
