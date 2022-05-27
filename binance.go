@@ -23,7 +23,6 @@ var limit int
 var interval string
 var qty string
 
-var bought = false
 var firstTrade = true
 
 func initSpotConnection() {

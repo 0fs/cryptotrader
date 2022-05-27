@@ -13,6 +13,8 @@ import (
 
 var asset indicator.Asset
 
+var prevOrderSide binance.SideType
+
 func main() {
 
 	initComponents()
@@ -38,7 +40,7 @@ func main() {
 			actions := indicator.RsiStrategy(asset, 70, 30)
 
 			// Trade by the latest action
-			trade(actions[len(actions)-1])
+			trade(actions)
 		}
 	}
 
@@ -60,25 +62,41 @@ func initComponents() {
 	initSpotConnection()
 }
 
-func trade(action indicator.Action) {
-
-	if action == indicator.HOLD {
+func trade(actions []indicator.Action) {
+	if actions[len(actions)-1] == indicator.HOLD {
 		logger.Info().Msgf("Hold")
 		return
 	}
 
-	side := binance.SideTypeBuy
-	if action == indicator.SELL {
-		side = binance.SideTypeSell
+	if actions[len(actions)-1] == indicator.SELL && (prevOrderSide == binance.SideTypeBuy || firstTrade) {
+		err := doOrder(binance.SideTypeSell)
+		if err != nil {
+			logger.Err(err).Msg("Could not SELL")
+		}
+		return
 	}
 
+	if actions[len(actions)-1] == indicator.BUY && (prevOrderSide == binance.SideTypeSell || firstTrade) {
+		err := doOrder(binance.SideTypeBuy)
+		if err != nil {
+			logger.Err(err).Msg("Could not BUY")
+		}
+		return
+	}
+}
+
+func doOrder(side binance.SideType) error {
 	order, err := spotClient.NewCreateOrderService().Symbol(symbol).
 		Side(side).Type(binance.OrderTypeMarket).Quantity(qty).Do(context.Background())
 
 	if err != nil {
-		logger.Error().Err(err).Msg("Could not create the the order")
-		return
+		return err
 	}
 
-	logger.Info().Msgf("OrderID: %d | Price: %s", order.OrderID, order.Price)
+	logger.Info().Msgf("%s Order ID: %d", side, order.OrderID)
+	prevOrderSide = side
+	firstTrade = false
+	updateBalances()
+
+	return nil
 }
