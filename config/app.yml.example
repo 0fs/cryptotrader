@@ -3,6 +3,7 @@ binance:
   symbol: BTCUSDT
   limit: 10000
   interval: 1m
+  qty: 0.005
   api:
     spot:
       key: your-spot-api-key

@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/0fs/cryprotrader/utils"
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/delivery"
 	"github.com/adshao/go-binance/v2/futures"
-	"github.com/cinar/indicator"
 	"github.com/rs/zerolog/log"
+	"strconv"
+	"time"
 )
 
 var spotClient *binance.Client
@@ -21,8 +21,8 @@ var usdtBalance binance.Balance
 var symbol string
 var limit int
 var interval string
+var qty string
 
-var bought = false
 var firstTrade = true
 
 func initSpotConnection() {
@@ -30,9 +30,16 @@ func initSpotConnection() {
 	binance.UseTestnet = config.GetBool("binance.test")
 	spotClient = binance.NewClient(config.GetString("binance.api.spot.key"), config.GetString("binance.api.spot.secret"))
 
+	timeOffset, err := spotClient.NewSetServerTimeService().Do(context.Background())
+	if err != nil {
+		log.Fatal().Msgf("Could not get server time offset")
+	}
+	spotClient.TimeOffset = timeOffset
+
 	symbol = config.GetString("binance.symbol")
 	limit = config.GetInt("binance.limit")
 	interval = config.GetString("binance.interval")
+	qty = config.GetString("binance.qty")
 
 	updateBalances()
 }
@@ -57,53 +64,21 @@ func initDeliveryConnection() {
 	log.Info().Interface("Delivery account", account)
 }
 
-func getRecentKlines() {
-	// First of all get initial 1000 klines
+func initRecentKlines() {
 	klines, err := spotClient.NewKlinesService().Symbol(symbol).Limit(limit).
 		Interval(interval).Do(context.Background())
 	if err != nil {
 		logger.Fatal().Err(err).Msg("")
 	}
 
-	for _, k := range klines {
-		klineCloses = append(klineCloses, utils.Stf(k.Close))
-		klineHigh = append(klineHigh, utils.Stf(k.High))
-		klineLow = append(klineLow, utils.Stf(k.Low))
+	for i := 0; i < len(klines)-1; i++ {
+		t, _ := time.Parse("", strconv.FormatInt(klines[i].OpenTime, 10))
+		asset.Date = append(asset.Date, t)
+		asset.Low = append(asset.Low, utils.Stf(klines[i].Low))
+		asset.High = append(asset.High, utils.Stf(klines[i].High))
+		asset.Opening = append(asset.Opening, utils.Stf(klines[i].Open))
+		asset.Closing = append(asset.Closing, utils.Stf(klines[i].Close))
 	}
-}
-
-func getIndicators() {
-	//_, rsi := indicator.RsiPeriod(14, klineCloses)
-	//logger.Info().Msgf("RSI: %.8f", rsi[len(rsi)-1])
-
-	//ao := indicator.AwesomeOscillator(klineLow, klineHigh)
-	//logger.Info().Msgf("Awesome Oscillator : %.8f", ao[len(ao)-1])
-
-	//k, d := indicator.StochasticOscillator(klineHigh, klineLow, klineCloses)
-	//logger.Info().Msgf("Stoch RSI 1: %.8f %.8f", k[len(k)-1], d[len(d)-1])
-
-	var wrTopLine, wrBotLine float64 = -15.0, -85.0
-	wr := indicator.WilliamsR(klineLow, klineHigh, klineCloses)
-	//logger.Info().Msgf("WilliamsR : %.8f", wr[len(wr)-1])
-
-	if wr[len(wr)-2] > wrTopLine && wr[len(wr)-1] <= wrTopLine && (bought || firstTrade) {
-		trade(binance.SideTypeSell)
-		fmt.Println("SELL")
-		bought = false
-		firstTrade = false
-		logger.Info().Msgf("WilliamsR : %.8f %.8f", wr[len(wr)-2], wr[len(wr)-1])
-
-		updateBalances()
-	} else if wr[len(wr)-2] < wrBotLine && wr[len(wr)-1] >= wrBotLine && (!bought || firstTrade) {
-		trade(binance.SideTypeBuy)
-		fmt.Println("BUY")
-		bought = true
-		firstTrade = false
-		logger.Info().Msgf("WilliamsR : %.8f %.8f", wr[len(wr)-2], wr[len(wr)-1])
-
-		updateBalances()
-	}
-
 }
 
 func updateBalances() {
